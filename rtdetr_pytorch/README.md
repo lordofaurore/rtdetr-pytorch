@@ -1,111 +1,211 @@
-## TODO
-<details>
-<summary> see details </summary>
+# TODO
 
-- [x] Training
-- [x] Evaluation
-- [x] Export onnx
-- [x] Upload source code
-- [x] Upload weight convert from paddle, see [*links*](https://github.com/lyuwenyu/RT-DETR/issues/42)
-- [x] Align training details with the [*paddle version*](../rtdetr_paddle/)
-- [x] Tuning rtdetr based on [*pretrained weights*](https://github.com/lyuwenyu/RT-DETR/issues/42)
+---
+
+## Installation
+
+<details>
+<summary><strong>Prerequisites</strong></summary>
+
+- Python 3.11+
+- NVIDIA GPU with CUDA 12.8+ (Blackwell RTX 50xx architecture recommended)
+- 16GB+ RAM (32GB recommended)
+- 16GB+ VRAM for `batch_size=8`
 
 </details>
 
-
-## Model Zoo
-
-| Model | Dataset | Input Size | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | #Params(M) | FPS |  checkpoint |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-rtdetr_r18vd | COCO | 640 | 46.4 | 63.7 | 20 | 217 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth)
-rtdetr_r34vd | COCO | 640 | 48.9 | 66.8 | 31 | 161 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r34vd_dec4_6x_coco_from_paddle.pth)
-rtdetr_r50vd_m | COCO | 640 | 51.3 | 69.5 | 36 | 145 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_m_6x_coco_from_paddle.pth)
-rtdetr_r50vd | COCO | 640 | 53.1 | 71.2| 42 | 108 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_6x_coco_from_paddle.pth)
-rtdetr_r101vd | COCO | 640 | 54.3 | 72.8 | 76 | 74 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r101vd_6x_coco_from_paddle.pth)
-rtdetr_18vd | COCO+Objects365 | 640 | 49.0 | 66.5 | 20 | 217 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r18vd_5x_coco_objects365_from_paddle.pth)
-rtdetr_r50vd | COCO+Objects365 | 640 | 55.2 | 73.4 | 42 | 108 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_2x_coco_objects365_from_paddle.pth)
-rtdetr_r101vd | COCO+Objects365 | 640 | 56.2 | 74.5 | 76 | 74 | [url<sup>*</sup>](https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r101vd_2x_coco_objects365_from_paddle.pth)
-rtdetr_regnet | COCO | 640 | 51.6 | 69.6 | 38 | 67 | [url<sup>*</sup>](https://drive.google.com/file/d/1K2EXJgnaEUJcZCLULHrZ492EF4PdgVp9/view?usp=sharing)
-rtdetr_dla34 | COCO | 640 | 49.6 | 67.4  | 34 | 83 | [url<sup>*</sup>](https://drive.google.com/file/d/1_rVpl-jIelwy2LDT3E4vdM4KCLBcOtzZ/view?usp=sharing)
-
-Notes
-- `COCO + Objects365` in the table means finetuned model on `COCO` using pretrained weights trained on `Objects365`.
-- `url`<sup>`*`</sup> is the url of pretrained weights convert from paddle model for save energy. *It may have slight differences between this table and paper*
-<!-- - `FPS` is evaluated on a single T4 GPU with $batch\\_size = 1$ and $tensorrt\\_fp16$ mode -->
-
-## Quick start
-
 <details>
-<summary>Install</summary>
+<summary><strong>Step-by-step setup</strong></summary>
 
+**1. Clone the repository**
+```bash
+git clone https://github.com/lordofaurore/rtdetr-pytorch.git
+cd rtdetr-pytorch
+```
+
+**2. Create a virtual environment**
+```bash
+python -m venv venv
+source venv/bin/activate   # Linux/macOS
+venv\Scripts\activate      # Windows
+```
+
+**3. Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
+> Installs `torch==2.7.0+cu128`, `torchvision==0.22.0+cu128`, `pycocotools`, `onnx`, and other required packages.
+
+**4. Download the COCO dataset**
+```bash
+mkdir -p dataset/coco/{annotations,train2017,val2017}
+
+# Download from the official COCO website:
+# http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+# http://images.cocodataset.org/zips/train2017.zip
+# http://images.cocodataset.org/zips/val2017.zip
+```
+
 </details>
 
 
-<details>
-<summary>Data</summary>
-
-- Download and extract COCO 2017 train and val images.
-```
-path/to/coco/
-  annotations/  # annotation json files
-  train2017/    # train images
-  val2017/      # val images
-```
-- Modify config [`img_folder`, `ann_file`](configs/dataset/coco_detection.yml)
-</details>
-
-
+## Training
 
 <details>
-<summary>Training & Evaluation</summary>
+<summary><strong>Train from scratch (12 epochs — "1x" schedule)</strong></summary>
 
-- Training on a Single GPU:
-
-```shell
-# training on single-gpu
-export CUDA_VISIBLE_DEVICES=0
+```bash
 python tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml
 ```
 
-- Training on Multiple GPUs:
-
-```shell
-# train on multi-gpu
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-torchrun --nproc_per_node=4 tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml
-```
-
-- Evaluation on Multiple GPUs:
-
-```shell
-# val on multi-gpu
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-torchrun --nproc_per_node=4 tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml -r path/to/checkpoint --test-only
-```
-
 </details>
-
-
 
 <details>
-<summary>Export</summary>
+<summary><strong>Resume from a checkpoint</strong></summary>
 
-```shell
-python tools/export_onnx.py -c configs/rtdetr/rtdetr_r18vd_6x_coco.yml -r path/to/checkpoint --check
+```bash
+python tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml \
+    -r output/rtdetr_r50vd_6x_coco/checkpoint.pth
 ```
+
+</details>
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
+```powershell
+$env:CUDA_VISIBLE_DEVICES="0"
+python tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml
+```
+
+> **Windows users**: set `num_workers: 0` in config files to avoid memory issues.
+
 </details>
 
 
+## Evaluation
 
+<details>
+<summary><strong>Evaluate on COCO val2017</strong></summary>
 
-<details open>
-<summary>Train custom data</summary>
+```bash
+python tools/train.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml \
+    -r output/rtdetr_r50vd_6x_coco/checkpoint.pth --test-only
+```
 
-1. set `remap_mscoco_category: False`. This variable only works for ms-coco dataset. If you want to use `remap_mscoco_category` logic on your dataset, please modify variable [`mscoco_category2name`](https://github.com/lyuwenyu/RT-DETR/blob/main/rtdetr_pytorch/src/data/coco/coco_dataset.py#L154) based on your dataset.
-
-2. add `-t path/to/checkpoint` (optinal) to tuning rtdetr based on pretrained checkpoint. see [training script details](./tools/README.md).
 </details>
+
+
+## Inference
+
+<details>
+<summary><strong>Run inference on a single image</strong></summary>
+
+```bash
+python tools/infer.py -c configs/rtdetr/rtdetr_r50vd_6x_coco.yml \
+    -r output/rtdetr_r50vd_6x_coco/checkpoint.pth \
+    -f path/to/image.jpg
+```
+
+</details>
+
+---
+
+## Project Structure
+
+```
+rtdetr-pytorch/
+├── configs/                 # Configuration files
+│   ├── dataset/            # Dataset configs (COCO, etc.)
+│   └── rtdetr/             # Model configs
+├── src/                    # Core source code
+│   ├── core/               # Core utilities
+│   ├── data/               # Data loading & transforms
+│   ├── misc/               # Miscellaneous helpers
+│   ├── nn/                 # Neural network modules
+│   ├── optim/              # Optimizers & schedulers
+│   ├── solver/             # Training & evaluation loops
+│   └── zoo/                # Model zoo (RT-DETR implementations)
+├── tools/                  # Executable scripts
+│   ├── train.py            # Training script
+│   ├── infer.py            # Inference script
+│   └── export_onnx.py      # ONNX export
+├── output/                 # Checkpoints and logs (gitignored)
+└── dataset/                # COCO dataset (gitignored)
+```
+
+
+## Configuration
+
+Key training parameters in `configs/rtdetr/include/dataloader.yml`:
+
+```yaml
+train_dataloader:
+  batch_size: 8        # Adjust based on available VRAM
+  num_workers: 0       # Set to 0 on Windows
+  shuffle: True
+
+val_dataloader:
+  batch_size: 8
+  num_workers: 0
+```
+
+### VRAM usage by batch size (RTX 5060 Ti 16GB)
+
+| Batch Size | Estimated VRAM | Status |
+|-----------|----------------|--------|
+| 4 | ~10 GB | ✅ Safe |
+| 6 | ~13 GB | ✅ Comfortable |
+| 8 | ~16 GB | ✅ Optimal |
+| 12 | ~22 GB | ❌ Requires 24GB+ GPU |
+
+
+## Training Progress
+
+| Epoch | mAP | AP50 | Note |
+|-------|-----|------|------|
+| 6 | 45.3% | 62.4% | Intermediate checkpoint |
+| **12** | **49.1%** | **66.9%** | **Final model (1x schedule)** |
+
+**Training environment:**
+
+| Parameter | Value |
+|-----------|-------|
+| GPU | RTX 5060 Ti (16GB VRAM) |
+| CUDA | 12.8 (PyTorch 2.7.0+cu128) |
+| Batch size | 8 |
+| Input resolution | 640×640 |
+| Optimizer | AdamW |
+| LR Scheduler | MultiStepLR |
+| Time per epoch | ~3h |
+
+
+## ⚠️ Important Notes on CUDA
+
+- **PyTorch version**: this repo uses `torch==2.7.0+cu128`, compiled with CUDA 12.8.
+- **Driver compatibility**: your NVIDIA driver must support CUDA 12.8 (version ≥ 525.60.13).
+- **RTX 50xx support**: PyTorch 2.7+ includes native support for Blackwell architecture (sm_120).
+- **Verification**: always verify CUDA availability before launching training.
+
+
+## Acknowledgments
+
+- Original paper: [RT-DETR: DETRs Beat YOLOs on Real-time Object Detection](https://arxiv.org/abs/2304.08069)
+- Official implementation: [PaddlePaddle/PaddleDetection](https://github.com/PaddlePaddle/PaddleDetection)
+- PyTorch adaptation: [lyuwenyu/RT-DETR](https://github.com/lyuwenyu/RT-DETR)
+
+
+## 📄 License
+
+This project is licensed under the **Apache 2.0 License** — see the [LICENSE](LICENSE) file for details.
+
+
+## Author
+
+**AARON CLARK** — [@lordofaurore](https://github.com/lordofaurore)
+
+
+> **Note**: this is an independent implementation trained with a "1x" schedule (12 epochs) rather than the full "6x" schedule (72 epochs) from the original paper. The model achieves competitive results with significantly reduced training time.
+
+⭐ If you find this repository useful, please consider giving it a star!
