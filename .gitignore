@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+venv/
+env/
+.venv/
+
+# Checkpoints (VOLUMINEUX)
+*.pth
+*.pt
+output/
+checkpoints/
+
+# Dataset COCO
+dataset/coco/
+*.jpg
+*.png
+*.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,13 @@
+--index-url https://download.pytorch.org/whl/cu128
+torch==2.7.0
+torchvision==0.22.0
+onnx==1.14.0
+onnxruntime==1.15.1
+pycocotools
+PyYAML
+scipy
+transformers
+opencv-python
+Pillow
+numpy
+tqdm
